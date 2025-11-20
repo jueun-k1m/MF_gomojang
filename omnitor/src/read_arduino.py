@@ -48,7 +48,6 @@ def find_arduino_port():
         if "Arduino" in port.description:
             arduino_port = port.device
             return arduino_port
-    
     return None
 
 
@@ -84,6 +83,7 @@ def read_data(ser):
 def moving_avg_filter(data, data_buffer):
 
     """ 이동 평균 필터 적용 및 데이터베이스 저장 함수 """
+    
     avg_data = {}
     
     for key, value in data.items():
@@ -96,6 +96,9 @@ def moving_avg_filter(data, data_buffer):
    
 
 def update_latest_raw_data(avg_data):
+
+    """ 최신 raw 데이터 지역 변수에 업데이트 하는 함수 (보정용) """
+
     global latest_raw_data # 지역 변수 사용 선언
 
     latest_raw_data = {
