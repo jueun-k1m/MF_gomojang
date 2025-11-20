@@ -16,7 +16,7 @@ django.setup()
 from omnitor.models import SensorData
 
 
-# ==== 변수 설정 ====
+# 변수 설정 
 arduino_baudrate = 9600 # 시리얼 통신
 
 moving_average_window = 5 # 이동 평균 필터에서 윈도우 크기
@@ -27,8 +27,6 @@ read_data_sec = 1 # 데이터 읽는 초 단위
 latest_raw_data = {}
 
 # 이동 평균을 위한 데이터 버퍼 (Deque)
-
-
 data_buffer = {
     'air_temperature': deque(maxlen=moving_average_window),
     'air_humidity': deque(maxlen=moving_average_window),
@@ -133,22 +131,34 @@ def main():
 
     print("아두이노 센서 읽기 시작합니다.")
     
-    try:
-        arduino = find_arduino_port()
-        if not arduino:
-            error = "아두이노 포트를 찾을 수 없습니다. 연결을 확인하세요."
-            print(error)
-            return
-        print(f"아두이노 포트 발견: {arduino}")
-        ser = serial.Serial(arduino, arduino_baudrate, timeout=1)
-        time.sleep(2)  # 시리얼 연결 안정화 대기
+    ser = None
 
-        last_read_time = time.time()
-        last_save_time = time.time()
+    last_read_time = time.time()
+    last_save_time = time.time()
 
-        while True:
+    while True:
+
+        try:
             current_time = time.time()
+            
+            # 아두이노 연결 될 때까지 대기
+            if ser is None:
+                arduino = find_arduino_port()
+                if arduino:
+                    print(f"아두이노 포트를 찾았습니다: {arduino}")
+                    try:
+                        ser = serial.Serial(arduino, arduino_baudrate, timeout=1)
+                        time.sleep(2)  # 시리얼 연결 안정화 대기
+                    except serial.SerialException as e:
+                        print(f"시리얼 포트 열기 실패: {e}")
+                        ser = None
+                else:
+                    print("아두이노 포트를 찾지 못 했습니다. 다시 시도합니다...")
+                    ser = None
 
+                continue  # 포트를 찾을 때까지 대기
+
+            
             # 데이터 읽기
             if current_time - last_read_time >= read_data_sec:
                 data = read_data(ser) # 아두이노에서 데이터 읽기
@@ -163,19 +173,27 @@ def main():
                         print(f"[{data['timestamp']}] 데이터 저장 완료: {avg_data}")
                         last_save_time = current_time # 저장 시간 업데이트
 
-
                 last_read_time = current_time
 
             time.sleep(0.05)  # CPU 사용량 절감을 위한 짧은 대기
-        
-    except Exception as e:
-        print(f"오류 발생: {e}")   
-    except KeyboardInterrupt:
-        print("프로그램 종료 중...")
-    finally:
-        if 'ser' in locals() and ser.is_open:
-            ser.close()
-        print("프로그램이 종료되었습니다.")
 
+        except (OSError, serial.SerialException) as e:
+            print(f"시리얼 포트 오류 발생: {e}")
+            if ser:
+                ser.close()
+            ser = None  # 포트 오류 시 재설정
+            time.sleep(5)  # 재시도 전 대기
+
+        except KeyboardInterrupt:
+            print("프로그램을 종료합니다.")
+            if ser and ser.is_open:
+                ser.close()
+            break
+
+        except Exception as e:
+            print(f"오류 발생: {e}")
+            ser = None  # 오류 발생 시 시리얼 포트 재설정
+            time.sleep(5)  # 재시도 전 대기
+        
 if __name__ == '__main__':
     main()
