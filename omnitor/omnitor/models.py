@@ -55,8 +55,26 @@ class FinalData(models.Model):
     """ 최종 보정된 센서 데이터 모델 """
 
     timestamp = models.DateTimeField(auto_now_add=True)
+    
+    # 환경 센서
+    air_temperature = models.FloatField(null=True, blank=True)
+    air_humidity = models.FloatField(null=True, blank=True)
+    co2 = models.FloatField(null=True, blank=True)
+    insolation = models.FloatField(null=True, blank=True)
+    
+    # 배액 센서
+    water_temperature = models.FloatField(null=True, blank=True)
+    ph_final = models.FloatField(null=True, blank=True)
+    ec_final = models.FloatField(null=True, blank=True)
 
-
+    # 로드셀
+    weight_final= models.FloatField(null=True, blank=True)
+    
+    # 토양 센서
+    soil_temperature = models.FloatField(null=True, blank=True)
+    soil_humidity = models.FloatField(null=True, blank=True)
+    soil_ec = models.FloatField(null=True, blank=True)
+    soil_ph = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return f"최신 센서 raw 데이터: {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
